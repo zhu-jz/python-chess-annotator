@@ -1,0 +1,11 @@
+{
+    "ERROR_THRESHOLD": {
+        "BLUNDER": -200,
+        "MISTAKE": -100,
+        "DUBIOUS": -50
+    },
+    "NEEDS_ANNOTATION_THRESHOLD": 7.5,
+    "MAX_SCORE": 10000,
+    "MAX_CPL": 2000,
+    "SHORT_PV_LEN": 16
+}

@@ -20,16 +20,16 @@ import chess.engine
 import chess.variant
 
 
-# Constants
-ERROR_THRESHOLD = {
-    'BLUNDER': -300,
-    'MISTAKE': -150,
-    'DUBIOUS': -75,
-}
-NEEDS_ANNOTATION_THRESHOLD = 7.5
-MAX_SCORE = 10000
-MAX_CPL = 2000
-SHORT_PV_LEN = 10
+# Load the config file
+with open('config.json', 'r') as f:
+    config = json.load(f)
+
+# Assign values to variables
+ERROR_THRESHOLD = config["ERROR_THRESHOLD"]
+NEEDS_ANNOTATION_THRESHOLD = config["NEEDS_ANNOTATION_THRESHOLD"]
+MAX_SCORE = config["MAX_SCORE"]
+MAX_CPL = config["MAX_CPL"]
+SHORT_PV_LEN = config["SHORT_PV_LEN"]
 
 # Initialize Logging Module
 logger = logging.getLogger(__name__)
