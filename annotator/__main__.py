@@ -16,7 +16,7 @@ import logging
 import math
 import chess
 import chess.pgn
-import chess.uci
+import chess.engine
 import chess.variant
 
 
@@ -96,8 +96,8 @@ def eval_numeric(info_handler):
     found. This facilitates comparing numerical evaluations with depth-to-mate
     evaluations
     """
-    dtm = info_handler.info["score"][1].mate
-    cp = info_handler.info["score"][1].cp
+    dtm = info_handler["score"].relative.mate()
+    cp = info_handler["score"].relative.score()
 
     if dtm is not None:
         # We have depth-to-mate (dtm), so translate it into a numerical
@@ -126,8 +126,8 @@ def eval_human(white_to_move, info_handler):
         (e.g. "Mate in 4")
         If depth-to-mate was not found, return an absolute numeric evaluation
     """
-    dtm = info_handler.info["score"][1].mate
-    cp = info_handler.info["score"][1].cp
+    dtm = info_handler["score"].relative.mate()
+    cp = info_handler["score"].relative.score()
 
     if dtm is not None:
         return "Mate in {}".format(abs(dtm))
@@ -172,7 +172,7 @@ def needs_annotation(judgment):
     return delta > NEEDS_ANNOTATION_THRESHOLD
 
 
-def judge_move(board, played_move, engine, info_handler, searchtime_s):
+def judge_move(board, played_move, engine, searchtime_s):
     """
     Evaluate the strength of a given move by comparing it to engine's best
     move and evaluation at a given depth, in a given board context
@@ -195,20 +195,19 @@ def judge_move(board, played_move, engine, info_handler, searchtime_s):
           "nodes":         Number nodes searched
     """
 
-    # Calculate the search time in milliseconds
-    searchtime_ms = searchtime_s * 1000
+    # Calculate the search time
+    searchtime = searchtime_s / 2
 
     judgment = {}
 
     # First, get the engine bestmove and evaluation
-    engine.position(board)
-    engine.go(movetime=searchtime_ms / 2)
+    info_handler = engine.analyse(board, chess.engine.Limit(time=searchtime))
 
-    judgment["bestmove"] = info_handler.info["pv"][1][0]
+    judgment["bestmove"] = info_handler["pv"][0]
     judgment["besteval"] = eval_numeric(info_handler)
-    judgment["pv"] = info_handler.info["pv"][1]
-    judgment["depth"] = info_handler.info["depth"]
-    judgment["nodes"] = info_handler.info["nodes"]
+    judgment["pv"] = info_handler["pv"]
+    judgment["depth"] = info_handler["depth"]
+    judgment["nodes"] = info_handler["nodes"]
 
     # Annotate the best move
     judgment["bestcomment"] = eval_human(board.turn, info_handler)
@@ -219,8 +218,8 @@ def judge_move(board, played_move, engine, info_handler, searchtime_s):
     else:
         # get the engine evaluation of the played move
         board.push(played_move)
-        engine.position(board)
-        engine.go(movetime=searchtime_ms / 2)
+        info_handler = engine.analyse(board, 
+                                      chess.engine.Limit(time=searchtime))
 
         # Store the numeric evaluation.
         # We invert the sign since we're now evaluating from the opponent's
@@ -563,7 +562,7 @@ def analyze_game(game, arg_gametime, enginepath, threads):
     # Initialize the engine
     ###########################################################################
     try:
-        engine = chess.uci.popen_engine(enginepath)
+        engine = chess.engine.SimpleEngine.popen_uci(enginepath)
     except FileNotFoundError:
         errormsg = "Engine '{}' was not found. Aborting...".format(enginepath)
         logger.critical(errormsg)
@@ -574,9 +573,6 @@ def analyze_game(game, arg_gametime, enginepath, threads):
         logger.critical(errormsg)
         raise
 
-    engine.uci()
-    info_handler = chess.uci.InfoHandler()
-    engine.info_handlers.append(info_handler)
     if game.board().uci_variant != "chess" or game.root().board().chess960:
         # This is a variant game, so confirm that the engine we're using
         # supports the variant.
@@ -669,7 +665,7 @@ def analyze_game(game, arg_gametime, enginepath, threads):
 
         # Get the engine judgment of the played move in this position
         judgment = judge_move(prev_node.board(), node.move, engine,
-                              info_handler, time_per_move)
+                              time_per_move)
 
         # Record the delta, to be referenced in the second pass
         node.comment = judgment
@@ -729,7 +725,7 @@ def analyze_game(game, arg_gametime, enginepath, threads):
         if needs_annotation(judgment):
             # Get the engine judgment of the played move in this position
             judgment = judge_move(prev_node.board(), node.move, engine,
-                                  info_handler, time_per_move)
+                                  time_per_move)
 
             # Verify that the engine still dislikes the played move
             if needs_annotation(judgment):
