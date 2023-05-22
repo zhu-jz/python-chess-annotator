@@ -66,6 +66,11 @@ def parse_args():
                             (default: %(default)s)",
                         type=int,
                         default=1)
+    parser.add_argument("--hash_size", "-z", 
+                        help="hash for use by the engine \
+                            (default: %(default)s)", 
+                        type=int, 
+                        default=16)
     parser.add_argument("--verbose", "-v", help="increase verbosity",
                         action="count")
 
@@ -542,7 +547,7 @@ def get_time_per_move(pass_budget, ply_count):
     return float(pass_budget) / float(ply_count)
 
 
-def analyze_game(game, arg_gametime, enginepath, threads):
+def analyze_game(game, arg_gametime, enginepath, threads, hash_size):
     """
     Take a PGN game and return a GameNode with engine analysis added
     - Attempt to classify the opening with ECO and identify the root node
@@ -606,11 +611,13 @@ def analyze_game(game, arg_gametime, enginepath, threads):
         engine.setoption({
             "UCI_Variant": game.board().uci_variant,
             "UCI_Chess960": game.board().chess960,
-            "Threads": threads
+            "Threads": threads,
+            "Hash": hash_size
         })
     else:
         engine.setoption({
-            "Threads": threads
+            "Threads": threads,
+            "Hash": hash_size
         })
 
     # Start keeping track of the root node
@@ -787,7 +794,8 @@ def main():
             for game in iter(lambda: chess.pgn.read_game(pgn), None):
                 try:
                     analyzed_game = analyze_game(game, args.gametime,
-                                                 engine, args.threads)
+                                                 engine, args.threads,
+                                                 args.hash_size)
                 except KeyboardInterrupt:
                     logger.critical("\nReceived KeyboardInterrupt.")
                     raise
