@@ -749,10 +749,11 @@ def analyze_game(game, arg_gametime, enginepath, threads, hash_size):
 
     ###########################################################################
 
-    annotator = engine.name if engine.name else ""
+    annotator = engine.id["name"] if engine.id["name"] else ""
     node.root().comment = annotator
     node.root().headers["Annotator"] = annotator
-
+    engine.quit()
+    
     return node.root()
 
 
