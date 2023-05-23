@@ -608,14 +608,14 @@ def analyze_game(game, arg_gametime, enginepath, threads, hash_size):
 
         # Now that engine support for the variant is confirmed, set engine UCI
         # options as appropriate for the variant
-        engine.setoption({
+        engine.configure({
             "UCI_Variant": game.board().uci_variant,
             "UCI_Chess960": game.board().chess960,
             "Threads": threads,
             "Hash": hash_size
         })
     else:
-        engine.setoption({
+        engine.configure({
             "Threads": threads,
             "Hash": hash_size
         })
