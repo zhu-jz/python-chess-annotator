@@ -40,6 +40,62 @@ if not logger.handlers:
 # logging.basicConfig(level=logging.DEBUG)
 
 
+def sanitize_filename(filename):
+    # Replace invalid characters with underscore
+    invalid = '<>:"/\\|?*'
+    for char in invalid:
+        filename = filename.replace(char, '_')
+    
+    # Avoid reserved names
+    reserved = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 
+                'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3',
+                'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9']
+    # to match reserved names case insensitively
+    if filename.upper() in reserved:
+        filename = '_' + filename
+
+    # Remove trailing periods or spaces
+    filename = filename.rstrip('. ')
+    
+    # Limit length to 64 characters
+    filename = filename[:64]
+    
+    return filename
+
+
+def save_engine_config(engine, file_path):
+    """Saves the current configuration of the engine to a JSON file."""
+    config = {name: option.default for name, option in engine.options.items()
+              if not option.is_managed()}
+    with open(file_path, 'w') as f:
+        json.dump(config, f)
+
+
+def load_engine_config(engine, file_path):
+    """Loads an engine configuration from a JSON file."""
+    with open(file_path, 'r') as f:
+        config = json.load(f)
+    return {key: value for key, value in config.items()
+            if key in engine.options and not engine.options[key].is_managed()}
+
+
+def setup_engine(engine):
+    """Sets up the engine with a given configuration."""
+    # engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+    config_path = f'{sanitize_filename(engine.id["name"])}.json'
+    if os.path.exists(config_path):
+        # If a config file exists, load it and apply to the engine
+        config = load_engine_config(engine, config_path)
+        engine.configure(config)
+    else:
+        # Otherwise, save the engine's default configuration
+        save_engine_config(engine, config_path)
+    return engine
+
+# # Use it like this:
+# engine = setup_engine('/path/to/stockfish')
+
+
 def parse_args():
     """
     Define an argument parser and return the parsed arguments
